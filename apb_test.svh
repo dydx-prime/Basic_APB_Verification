@@ -1,0 +1,41 @@
+`ifndef APB_BASE_TEST_SV
+`define APB_BASE_TEST_SV
+
+// top level test class - instantiates env, configures/starts sitmulus
+class apb_base_test extends uvm_test;
+
+  // register with factory
+  `uvm_component_utils(apb_base_test);
+
+  apb_env env;
+  apb_config cfg;
+  virtual apb_if vif;
+
+  function new(string name = "apb_base_test", uvm_component parent = null);
+    super.new(name, parent);
+  endfunction
+
+  // build phase - config and env class are constructed using factory
+  // gets virtual interface handle from test and sets config_db for env
+  function void build_phase(uvm_phase phase);
+    cfg = apb_config::type_id::create("cfg", this);
+    env = apb_env::type_id::create("env", this);
+    if(!uvm_config_db#(virtual apb_if)::get(this, "", "vif", vif)) begin
+      `uvm_fatal("APB/DRV/NOVIF", "No virtual interface specified for this test instance")
+    end
+    uvm_config_db#(virtual apb_if)::set(this, "env", "vif", vif);
+  endfunction
+
+  // run phase - create apb_sequence and start it on the apb_sequencer
+  task run_phase(uvm_phase phase);
+    apb_base_seq apb_seq;
+    apb_seq = apb_base_seq::type_id::create("apb_seq");
+    phase.raise_objection(this, "Starting apb_base_seqin main phase");
+    $display("%t Starting sequence apb_seq run_phase", $time);
+    apb_seq.start(env.agt.sqr);
+    #100ns;
+    phase.drop_objection(this, "Finished apb_seq in main phase");
+  endtask: run_phase
+endclass
+
+`endif
